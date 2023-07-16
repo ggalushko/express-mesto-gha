@@ -18,5 +18,6 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
+app.use((req, res) => res.status(404).send({ message: 'Такой страницы нет' }));
 
 app.listen(PORT);
