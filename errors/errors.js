@@ -14,4 +14,4 @@ const ERRORS = {
 
 };
 
-export default ERRORS;
+module.exports = ERRORS;
