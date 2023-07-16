@@ -1,22 +1,22 @@
-const mongoose = require('mongoose');
 const express = require('express');
-
-const userRouter = require('./routes/users');
-const cardRouter = require('./routes/cards');
+const mongoose = require('mongoose');
+const usersRouter = require('./routes/users');
+const cardsRouter = require('./routes/cards');
 
 const { PORT = 3000 } = process.env;
 const app = express();
+mongoose.connect('mongodb://127.0.0.1:27017/mestodb');
 
-app.use(express.json());
 app.use((req, res, next) => {
   req.user = {
-    _id: '5d8b8592978f8bd833ca8133', // вставьте сюда _id созданного в предыдущем пункте пользователя
+    _id: '64b3a06a13f75dc508e2692c',
   };
 
   next();
 });
 
-app.use('/users', userRouter);
-app.use('/cards', cardRouter);
+app.use(express.json());
+app.use('/users', usersRouter);
+app.use('/cards', cardsRouter);
 
-mongoose.connect('mongodb://localhost:27017/mestodb').then(() => app.listen(PORT));
+app.listen(PORT);
