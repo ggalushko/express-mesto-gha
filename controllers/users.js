@@ -10,28 +10,46 @@ const { jwtToken } = require('../middlewares/auth');
 
 const saltRounds = 10;
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => { throw new ServerError('Ошибка сервера'); });
+    .catch(() => { next(new ServerError('Ошибка сервера')); });
 };
 
-module.exports.getUser = (req, res) => {
+module.exports.getUser = (req, res, next) => {
   const { userId } = req.params;
   User.findById(userId)
     .then((user) => {
       if (!user) {
-        throw new NotFoundError('Пользователь не найден');
+        next(new NotFoundError('Пользователь не найден'));
       }
       return res.send({ data: user });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        throw new BadRequestError('Неверный запрос');
+        next(new BadRequestError('Неверный запрос'));
       }
-      throw new ServerError('Ошибка сервера');
+      next(new ServerError('Ошибка сервера'));
     });
 };
+
+module.exports.getCurrentUser = (req, res, next) => {
+  const userId = req.user._id;
+  User.findById(userId)
+    .orFail(() => {
+      next(new NotFoundError('Пользователь  не найден'));
+    })
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        next(new BadRequestError('Некорректный запрос'));
+      } else {
+        next(err);
+      }
+    });
+};//
 
 module.exports.createUser = (req, res, next) => {
   const {
@@ -54,60 +72,55 @@ module.exports.createUser = (req, res, next) => {
           email: user.email,
           _id: user._id,
         };
-        res.send({ data: userData });
+        res.status(201).send({ data: userData });
       })
       .catch((err) => {
         if (err.code === 11000) {
           next(new ConflictError('Вы уже зарегистрированы'));
         } else if (err.name === 'ValidationError') {
-          throw new BadRequestError('Неверный запрос');
+          next(new BadRequestError('Неверный запрос'));
         }
-        throw new ServerError('Ошибка сервера');
+        next(new ServerError('Ошибка сервера'));
       });
   }).catch((err) => {
     next(err);
   });
 };
 
-module.exports.updateUserInfo = (req, res) => {
+module.exports.updateUserInfo = (req, res, next) => {
   const { name, about } = req.body;
-  const userId = req.user._id;
-
-  User.findByIdAndUpdate(
-    userId,
-    { name, about },
-    { new: true, runValidators: true },
-  )
+  User
+    .findByIdAndUpdate(
+      req.user._id,
+      { name, about },
+      { new: true, runValidators: true },
+    )
     .then((user) => {
       if (!user) {
-        throw new NotFoundError('Пользователь не найден');
+        next(new NotFoundError('Пользователь не найден'));
       }
-      return res.send({ data: user });
+      res.status(200).send(user);
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        throw new BadRequestError('Неверный запрос');
-      }
-      throw new ServerError('Ошибка сервера');
+        next(BadRequestError('Введены некорректные данные'));
+      } else next(err);
     });
 };
 
-module.exports.updateUserAvatar = (req, res) => {
+module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
-  const userId = req.user._id;
-
-  User.findByIdAndUpdate(userId, { avatar }, { new: true, runValidators: true })
-    .then((user) => {
-      if (!user) {
-        throw new NotFoundError('Пользователь не найден');
-      }
-      return res.send({ data: user });
-    })
+  User
+    .findByIdAndUpdate(
+      req.user._id,
+      { avatar },
+      { new: true, runValidators: true },
+    )
+    .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        throw new BadRequestError('Неверный запрос');
-      }
-      throw new ServerError('Ошибка сервера');
+        next(new BadRequestError('Введены некорректные данные'));
+      } else next(err);
     });
 };
 
@@ -118,7 +131,7 @@ module.exports.login = (req, res, next) => {
     .select('+password')
     .then((user) => {
       if (!user) {
-        throw new BadRequestError('Неверный запрос');
+        next(new BadRequestError('Неверный запрос'));
       }
 
       const passwordValid = bcrypt.compare(password, user.password);
@@ -127,7 +140,7 @@ module.exports.login = (req, res, next) => {
     })
     .then(([passwordIsValid, user]) => {
       if (!passwordIsValid) {
-        throw new AuthError('Ошибка авторизации');
+        next(new AuthError('Ошибка авторизации'));
       }
       return jwtToken({ id: user._id });
     })
