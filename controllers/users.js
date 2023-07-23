@@ -110,6 +110,7 @@ module.exports.updateUserInfo = (req, res, next) => {
 
 module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
+
   User
     .findByIdAndUpdate(
       req.user._id,
@@ -131,7 +132,7 @@ module.exports.login = (req, res, next) => {
     .select('+password')
     .then((user) => {
       if (!user) {
-        next(new BadRequestError('Неверный запрос'));
+        next(new AuthError('Ошибка авторизации'));
       }
 
       const passwordValid = bcrypt.compare(password, user.password);
@@ -140,7 +141,7 @@ module.exports.login = (req, res, next) => {
     })
     .then(([passwordIsValid, user]) => {
       if (!passwordIsValid) {
-        next(new AuthError('Ошибка авторизации'));
+        throw new AuthError('Ошибка авторизации');
       }
       return jwtToken({ id: user._id });
     })

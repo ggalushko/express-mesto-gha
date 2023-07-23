@@ -18,11 +18,24 @@ app.post('/signin', login);
 app.post('/signup', createUser);
 
 app.use(auth);
-app.use(errors());
+
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
 app.use('*', (req, res, next) => {
   next(new NotFoundError('Ничего не найдено'));
+});
+
+app.use(errors());
+app.use((err, req, res, next) => {
+  const { statusCode = 500, message } = err;
+  res
+    .status(err.statusCode)
+    .send({
+      message: statusCode === 500
+        ? 'Произошла ошибка на сервере'
+        : message,
+    });
+  next();
 });
 
 app.listen(PORT);
