@@ -13,28 +13,25 @@ cardsRouter.get('/', getCards);
 cardsRouter.post('/', celebrate({
   body: Joi.object().keys({
     name: Joi.string().required().min(2).max(30),
-    link: Joi.string().required().pattern(/http(s)?:\/\/(www.)?[a-z0-9\.\-]+\/[a-z0-9\.\-_~:\/?#\[\]@!$&'()*+,;=]+/),
+    link: Joi.string().required().pattern(/https?:\/\/(www\.)?[-\w@:%\.\+~#=]{1,256}\.[a-z0-9()]{1,6}\b([-\w()@:%\.\+~#=//?&]*)/i),
   }),
 }), createCard);
 
 cardsRouter.delete('/:cardId', celebrate({
   params: Joi.object().keys({
-    cardId: Joi.string().length(24).hex().required()
-      .pattern(/[a-z][0-9]+/),
+    cardId: Joi.string().hex().length(24),
   }),
 }), deleteCard);
 
 cardsRouter.put('/:cardId/likes', celebrate({
   params: Joi.object().keys({
-    cardId: Joi.string().required().min(24).max(24)
-      .pattern(/[a-z][0-9]+/),
+    cardId: Joi.string().hex().length(24),
   }),
 }), likeCard);
 
 cardsRouter.delete('/:cardId/likes', celebrate({
   params: Joi.object().keys({
-    cardId: Joi.string().length(24).hex().required()
-      .pattern(/[a-z][0-9]+/),
+    cardId: Joi.string().hex().length(24),
   }),
 }), dislikeCard);
 
