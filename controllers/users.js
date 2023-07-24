@@ -73,9 +73,9 @@ module.exports.createUser = (req, res, next) => {
       })
       .catch((err) => {
         if (err.code === 11000) {
-          next(new ConflictError('Вы уже зарегистрированы'));
-        } else if (err.name === 'ValidationError') {
-          next(new BadRequestError('Неверный запрос'));
+          return next(new ConflictError('Вы уже зарегистрированы'));
+        } if (err.name === 'ValidationError') {
+          return next(new BadRequestError('Неверный запрос'));
         }
         next(new ServerError('Ошибка сервера'));
       });
