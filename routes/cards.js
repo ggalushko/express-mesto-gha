@@ -7,6 +7,14 @@ const {
   likeCard,
   dislikeCard,
 } = require('../controllers/cards');
+const BadRequestError = require('../errors/BadRequestError');
+
+const idValidator = (id) => {
+  if (/^[0-9a-fA-F]{24}$/.test(id)) {
+    return id;
+  }
+  throw new BadRequestError('некорретный id');
+};
 
 cardsRouter.get('/', getCards);
 
@@ -19,7 +27,7 @@ cardsRouter.post('/', celebrate({
 
 cardsRouter.delete('/:cardId', celebrate({
   params: Joi.object().keys({
-    cardId: Joi.string().required().hex().pattern(/^[0-9a-fA-F]{24}$/),
+    cardId: Joi.string().required().hex().custom(idValidator),
   }),
 }), deleteCard);
 
