@@ -3,7 +3,6 @@ const { celebrate, Joi } = require('celebrate');
 const {
   getUsers,
   getUser,
-  createUser,
   getCurrentUser,
   updateUserInfo,
   updateUserAvatar,
@@ -17,8 +16,6 @@ usersRouter.get('/:userId', celebrate({
     userId: Joi.string().length(24).hex().required(),
   }),
 }), getUser);
-
-usersRouter.post('/', createUser);
 
 usersRouter.patch('/me', celebrate({
   body: Joi.object().keys({
