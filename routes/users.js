@@ -18,12 +18,7 @@ usersRouter.get('/:userId', celebrate({
   }),
 }), getUser);
 
-usersRouter.post('/', celebrate({
-  body: Joi.object().keys({
-    name: Joi.string().min(2).max(30),
-    about: Joi.string().min(2).max(30),
-  }),
-}), createUser);
+usersRouter.post('/', createUser);
 
 usersRouter.patch('/me', celebrate({
   body: Joi.object().keys({
