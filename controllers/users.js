@@ -1,16 +1,19 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const NotFoundError = require('../errors/NotFoundError');
+const BadRequestError = require('../errors/BadRequestError');
 const AuthError = require('../errors/AuthError');
 const ConflictError = require('../errors/ConflictError');
 const ServerError = require('../errors/ServerError');
 
 const { jwtToken } = require('../middlewares/auth');
 
+const saltRounds = 10;
+
 module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => { next(new ServerError('Ошибка сервера')); });
+    .catch(() => next(new ServerError('Ошибка сервера')));
 };
 
 module.exports.getUser = (req, res, next) => {
@@ -18,33 +21,31 @@ module.exports.getUser = (req, res, next) => {
   User.findById(userId)
     .then((user) => {
       if (!user) {
-        next(new NotFoundError('Пользователь не найден'));
+        return next(new NotFoundError('Пользователь не найден'));
       }
       return res.send({ data: user });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new BadRequestError('Неверный запрос'));
+        return next(new BadRequestError('Неверный запрос'));
       }
-      next(new ServerError('Ошибка сервера'));
+      return next(new ServerError('Ошибка сервера'));
     });
 };
 
 module.exports.getCurrentUser = (req, res, next) => {
   const userId = req.user._id;
   User.findById(userId)
-    .orFail(() => {
-      next(new NotFoundError('Пользователь  не найден'));
-    })
+    .orFail(() => next(new NotFoundError('Пользователь  не найден')))
     .then((user) => {
       res.send(user);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new BadRequestError('Некорректный запрос'));
-      } else {
-        next(err);
+        return next(new BadRequestError('Некорректный запрос'));
       }
+
+      return next(err);
     });
 };//
 
@@ -74,14 +75,13 @@ module.exports.createUser = (req, res, next) => {
       .catch((err) => {
         if (err.code === 11000) {
           return next(new ConflictError('Вы уже зарегистрированы'));
-        } if (err.name === 'ValidationError') {
+        }
+        if (err.name === 'ValidationError') {
           return next(new BadRequestError('Неверный запрос'));
         }
-        next(new ServerError('Ошибка сервера'));
+        return next(new ServerError('Ошибка сервера'));
       });
-  }).catch((err) => {
-    next(err);
-  });
+  }).catch((err) => next(err));
 };
 
 module.exports.updateUserInfo = (req, res, next) => {
@@ -94,27 +94,33 @@ module.exports.updateUserInfo = (req, res, next) => {
     )
     .then((user) => {
       if (!user) {
-        next(new NotFoundError('Пользователь не найден'));
+        return next(new NotFoundError('Пользователь не найден'));
       }
-      res.status(200).send(user);
+      return res.status(200).send(user);
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(BadRequestError('Введены некорректные данные'));
-      } else next(err);
+        return next(BadRequestError('Введены некорректные данные'));
+      }
+      return next(err);
     });
 };
 
 module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
 
-  User.findByIdAndUpdate(req.user._id, { avatar }, { new: true, runValidators: true })
-    .orFail(() => new NotFoundError('Пользователь не найден'))
-    .then((user) => res.send(user))
+  User
+    .findByIdAndUpdate(
+      req.user._id,
+      { avatar },
+      { new: true, runValidators: true },
+    )
+    .then((user) => res.status(200).send(user))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        next(new BadRequestError('Введены некорректные данные'));
-      } else next(err);
+        return next(new BadRequestError('Введены некорректные данные'));
+      }
+      return next(err);
     });
 };
 
@@ -125,7 +131,7 @@ module.exports.login = (req, res, next) => {
     .select('+password')
     .then((user) => {
       if (!user) {
-        next(new AuthError('Ошибка авторизации'));
+        return next(new AuthError('Ошибка авторизации'));
       }
 
       const passwordValid = bcrypt.compare(password, user.password);
@@ -139,7 +145,5 @@ module.exports.login = (req, res, next) => {
       return jwtToken({ id: user._id });
     })
     .then((token) => res.send({ token }))
-    .catch((err) => {
-      next(err);
-    });
+    .catch((err) => next(err));
 };
