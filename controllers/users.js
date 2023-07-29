@@ -55,7 +55,7 @@ module.exports.createUser = (req, res, next) => {
   } = req.body;
 
   if (!password || !email) {
-    res.send({ message: 'Введены не все данные' });
+    return next(new BadRequestError('Введены не все данные'));
   }
 
   bcrypt.hash(password, saltRounds).then((hash) => {
