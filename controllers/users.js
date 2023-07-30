@@ -1,12 +1,10 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const NotFoundError = require('../errors/NotFoundError');
 const BadRequestError = require('../errors/BadRequestError');
-const AuthError = require('../errors/AuthError');
 const ConflictError = require('../errors/ConflictError');
 const ServerError = require('../errors/ServerError');
-
-const { jwtToken } = require('../middlewares/auth');
 
 const saltRounds = 10;
 
@@ -55,34 +53,31 @@ module.exports.createUser = (req, res, next) => {
     name, about, avatar, email, password,
   } = req.body;
 
-  if (!password || !email) {
-    return next(new BadRequestError('Введены не все данные'));
-  }
-
   bcrypt.hash(password, saltRounds).then((hash) => {
     User.create({
       name, about, avatar, email, password: hash,
     })
       .then((user) => {
-        const userData = {
-          name: user.name,
-          about: user.about,
-          avatar: user.avatar,
-          email: user.email,
-          _id: user._id,
-        };
-        res.status(201).send({ data: userData });
+        res.status(201).send({
+          data: {
+            name: user.name,
+            about: user.about,
+            avatar: user.avatar,
+            email: user.email,
+          },
+        });
       })
+      // eslint-disable-next-line consistent-return
       .catch((err) => {
         if (err.code === 11000) {
           return next(new ConflictError('Вы уже зарегистрированы'));
         }
         if (err.name === 'ValidationError') {
-          return next(new BadRequestError('Неверный запрос'));
+          return next(new ServerError('Неверный запрос'));
         }
-        return next(new ServerError('Ошибка сервера'));
+        next(err);
       });
-  }).catch((err) => next(err));
+  });
 };
 
 module.exports.updateUserInfo = (req, res, next) => {
@@ -127,24 +122,15 @@ module.exports.updateUserAvatar = (req, res, next) => {
 
 module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
-
-  User.findOne({ email })
-    .select('+password')
+  return User.findUserByCredentials(email, password)
     .then((user) => {
-      if (!user) {
-        return next(new AuthError('Ошибка авторизации'));
-      }
-
-      const passwordValid = bcrypt.compare(password, user.password);
-
-      return Promise.all([passwordValid, user]);
+      const token = jwt.sign({ _id: user._id }, 'yandex', { expiresIn: '7d' });
+      res.cookie('jwt', token, {
+        maxAge: 900000,
+        httpOnly: true,
+        sameSite: true,
+      })
+        .send({ token });
     })
-    .then(([passwordIsValid, user]) => {
-      if (!passwordIsValid) {
-        throw new AuthError('Ошибка авторизации');
-      }
-      return jwtToken({ id: user._id });
-    })
-    .then((token) => res.send({ token }))
-    .catch((err) => next(err));
+    .catch(next);
 };
