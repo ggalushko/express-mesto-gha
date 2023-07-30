@@ -13,7 +13,7 @@ module.exports.getCards = (req, res, next) => {
 
 module.exports.createCard = (req, res, next) => {
   const { name, link } = req.body;
-  Card.create({ name, link, owner: req.user._id })
+  Card.create({ name, link, owner: req.user.id })
     .then((card) => {
       res.status(201).send(card);
     })
@@ -32,7 +32,7 @@ module.exports.deleteCard = async (req, res, next) => {
       throw new NotFoundError('Карточка не найдена.');
     }
 
-    if (!card.owner.toString().equals(req.user._id)) {
+    if (!card.owner.equals(req.user.id)) {
       next(new ForbiddenError('нельзя удалять чужие карточки'));
       return;
     }
@@ -50,7 +50,7 @@ module.exports.deleteCard = async (req, res, next) => {
 module.exports.likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
-    { $addToSet: { likes: req.user._id } },
+    { $addToSet: { likes: req.user.id } },
     { new: true },
   )
     .then((cardData) => {
@@ -70,7 +70,7 @@ module.exports.likeCard = (req, res, next) => {
 module.exports.dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(
     req.params.cardId,
-    { $pull: { likes: req.user._id } },
+    { $pull: { likes: req.user.id } },
     { new: true },
   )
     .then((cardData) => {
