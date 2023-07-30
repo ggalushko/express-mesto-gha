@@ -1,10 +1,12 @@
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const NotFoundError = require('../errors/NotFoundError');
 const BadRequestError = require('../errors/BadRequestError');
+const AuthError = require('../errors/AuthError');
 const ConflictError = require('../errors/ConflictError');
 const ServerError = require('../errors/ServerError');
+
+const { jwtToken } = require('../middlewares/auth');
 
 const saltRounds = 10;
 
@@ -123,17 +125,26 @@ module.exports.updateUserAvatar = (req, res, next) => {
     });
 };
 
-module.exports.login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findUserByCredentials(email, password);
-    const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
-    res.cookie('jwt', token, {
-      maxAge: 3600000 * 24 * 7,
-      httpOnly: true,
-    });
-    res.send({ token });
-  } catch (err) {
-    next(err);
-  }
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+
+  User.findOne({ email })
+    .select('+password')
+    .then((user) => {
+      if (!user) {
+        return next(new AuthError('Ошибка авторизации'));
+      }
+
+      const passwordValid = bcrypt.compare(password, user.password);
+
+      return Promise.all([passwordValid, user]);
+    })
+    .then(([passwordIsValid, user]) => {
+      if (!passwordIsValid) {
+        throw new AuthError('Ошибка авторизации');
+      }
+      return jwtToken({ id: user._id });
+    })
+    .then((token) => res.send({ token }))
+    .catch((err) => next(err));
 };

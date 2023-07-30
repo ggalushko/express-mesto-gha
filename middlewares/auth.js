@@ -2,20 +2,28 @@ const jwt = require('jsonwebtoken');
 const AuthError = require('../errors/AuthError');
 
 const secretKey = 'yandex';
+const jwtToken = (payload) => jwt.sign(payload, secretKey, { expiresIn: '7d' });
 
-module.exports.auth = (req, res, next) => {
-  let payload;
-  const token = req.cookies.jwt;
+const auth = (req, res, next) => {
+  const { authorization } = req.headers;
 
-  if (!token) {
-    next(new AuthError('Необходима авторизация'));
+  if (!authorization || !authorization.startsWith('Bearer')) {
+    throw new AuthError('Вы не авторизованы');
   }
+
+  const token = authorization.replace('Bearer ', '');
+  let payload;
+
   try {
     payload = jwt.verify(token, secretKey);
-    req.user = payload;
   } catch (err) {
-    next(new AuthError('Необходима авторизация'));
+    return next(new AuthError('Некорректный токен'));
   }
+  req.user = payload;
+  return next();
+};
 
-  next();
+module.exports = {
+  auth,
+  jwtToken,
 };
