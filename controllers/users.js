@@ -12,7 +12,7 @@ const saltRounds = 10;
 
 module.exports.getUsers = (req, res, next) => {
   User.find({})
-    .then((users) => res.send({ data: users }))
+    .then((users) => res.send(users))
     .catch(() => next(new ServerError('Ошибка сервера')));
 };
 
@@ -23,7 +23,7 @@ module.exports.getUser = (req, res, next) => {
       if (!user) {
         return next(new NotFoundError('Пользователь не найден'));
       }
-      return res.send({ data: user });
+      return res.send(user);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -64,14 +64,12 @@ module.exports.createUser = (req, res, next) => {
       name, about, avatar, email, password: hash,
     })
       .then((user) => {
-        const userData = {
+        res.status(201).send({
           name: user.name,
           about: user.about,
           avatar: user.avatar,
           email: user.email,
-          _id: user._id,
-        };
-        res.status(201).send({ data: userData });
+        });
       })
       .catch((err) => {
         if (err.code === 11000) {
