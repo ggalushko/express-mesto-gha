@@ -7,8 +7,8 @@ const ForbiddenError = require('../errors/ForbiddenError');
 module.exports.getCards = (req, res, next) => {
   Card
     .find({})
-    .then((cards) => res.status(200).send(cards))
-    .catch(next);
+    .then((cards) => res.send(cards))
+    .catch((err) => next(err));
 };
 
 module.exports.createCard = (req, res, next) => {
@@ -23,19 +23,25 @@ module.exports.createCard = (req, res, next) => {
     });
 };
 
-module.exports.deleteCard = (req, res, next) => {
-  const { cardId } = req.params;
-  return Card.findById(cardId)
-    .then((card) => {
-      if (!card) {
-        return next(new NotFoundError('не найдено'));
-      }
-      if (!card.owner.equals(req.user._id)) {
-        return next(new ForbiddenError('Нельзя удалить чужую карточку'));
-      }
-      return card.remove().then(() => res.send({ message: 'Карточка удалена' }));
-    })
-    .catch(next);
+module.exports.deleteCard = async (req, res, next) => {
+  try {
+    const card = await Card.findById(req.params.id);
+    if (!card) {
+      throw new NotFoundError('Карточка не найдена.');
+    }
+
+    if (!card.owner.toString().equals(req.user._id)) {
+      throw new ForbiddenError('нельзя удалять чужие карточки');
+    }
+    await Card.findByIdAndDelete(req.params.id);
+    res.send(card);
+  } catch (err) {
+    if (err.name === 'CastError') {
+      next(new BadRequestError('некорректные данные.'));
+    } else {
+      next(err);
+    }
+  }
 };
 
 module.exports.likeCard = (req, res, next) => {
@@ -48,7 +54,7 @@ module.exports.likeCard = (req, res, next) => {
       if (!cardData) {
         return next(new NotFoundError('Ничего не найден'));
       }
-      return res.send({ data: cardData });
+      return res.send(cardData);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -68,7 +74,7 @@ module.exports.dislikeCard = (req, res, next) => {
       if (!cardData) {
         return next(new NotFoundError('Ничего не найден'));
       }
-      return res.send({ data: cardData });
+      return res.send(cardData);
     })
     .catch((err) => {
       if (err.name === 'CastError') {

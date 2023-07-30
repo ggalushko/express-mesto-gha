@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 const isUrl = require('validator/lib/isURL');
 const isEmail = require('validator/lib/isEmail');
+const AuthError = require('../errors/AuthError');
 
 const userSchema = new mongoose.Schema(
   {
@@ -40,5 +42,22 @@ const userSchema = new mongoose.Schema(
     versionKey: false,
   },
 );
+
+// eslint-disable-next-line func-names, consistent-return
+userSchema.statics.findUserByCredentials = async function (email, password, next) {
+  try {
+    const user = await this.findOne({ email }).select('+password');
+    if (!user) {
+      return Promise.reject(new AuthError('Ошибка авторизации'));
+    }
+    const passwordIsCorrect = await bcrypt.compare(password, user.password);
+    if (!passwordIsCorrect) {
+      return Promise.reject(new AuthError('Ошибка авторизации'));
+    }
+    return user;
+  } catch (err) {
+    next(err);
+  }
+};
 
 module.exports = mongoose.model('user', userSchema);
