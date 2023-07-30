@@ -49,6 +49,7 @@ module.exports.getCurrentUser = (req, res, next) => {
     });
 };//
 
+// eslint-disable-next-line consistent-return
 module.exports.createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
@@ -62,13 +63,16 @@ module.exports.createUser = (req, res, next) => {
     User.create({
       name, about, avatar, email, password: hash,
     })
-      .then(() => res.status(201).send(
-        {
-          data: {
-            name, about, avatar, email,
-          },
-        },
-      ))
+      .then((user) => {
+        const userData = {
+          name: user.name,
+          about: user.about,
+          avatar: user.avatar,
+          email: user.email,
+          _id: user._id,
+        };
+        res.status(201).send({ data: userData });
+      })
       .catch((err) => {
         if (err.code === 11000) {
           return next(new ConflictError('Вы уже зарегистрированы'));
@@ -76,7 +80,7 @@ module.exports.createUser = (req, res, next) => {
         if (err.name === 'ValidationError') {
           return next(new BadRequestError('Неверный запрос'));
         }
-        return next(err);
+        return next(new ServerError('Ошибка сервера'));
       });
   }).catch((err) => next(err));
 };
@@ -89,6 +93,7 @@ module.exports.updateUserInfo = (req, res, next) => {
       { name, about },
       { new: true, runValidators: true },
     )
+    // eslint-disable-next-line consistent-return
     .then((user) => {
       if (!user) {
         return next(new NotFoundError('Пользователь не найден'));
