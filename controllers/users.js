@@ -62,16 +62,13 @@ module.exports.createUser = (req, res, next) => {
     User.create({
       name, about, avatar, email, password: hash,
     })
-      .then((user) => {
-        const userData = {
-          name: user.name,
-          about: user.about,
-          avatar: user.avatar,
-          email: user.email,
-          _id: user._id,
-        };
-        res.status(201).send({ data: userData });
-      })
+      .then(() => res.status(201).send(
+        {
+          data: {
+            name, about, avatar, email,
+          },
+        },
+      ))
       .catch((err) => {
         if (err.code === 11000) {
           return next(new ConflictError('Вы уже зарегистрированы'));
@@ -79,7 +76,7 @@ module.exports.createUser = (req, res, next) => {
         if (err.name === 'ValidationError') {
           return next(new BadRequestError('Неверный запрос'));
         }
-        return next(new ServerError('Ошибка сервера'));
+        return next(err);
       });
   }).catch((err) => next(err));
 };
