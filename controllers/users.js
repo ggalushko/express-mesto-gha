@@ -34,9 +34,19 @@ module.exports.getUser = (req, res, next) => {
 };
 
 module.exports.getCurrentUser = (req, res, next) => {
-  User.findById(req.user._id)
-    .then((user) => res.send(user))
-    .catch(next);
+  const userId = req.user._id;
+  User.findById(userId)
+    .orFail(() => next(new NotFoundError('Пользователь  не найден')))
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'CastError') {
+        return next(new BadRequestError('Некорректный запрос'));
+      }
+
+      return next(err);
+    });
 };
 
 // eslint-disable-next-line consistent-return
