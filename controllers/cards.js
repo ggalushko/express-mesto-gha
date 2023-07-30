@@ -25,19 +25,19 @@ module.exports.createCard = (req, res, next) => {
     });
 };
 
+// eslint-disable-next-line consistent-return
 module.exports.deleteCard = async (req, res, next) => {
   try {
     const card = await Card.findById(req.params.cardId);
     if (!card) {
-      throw new NotFoundError('Карточка не найдена.');
+      return next(new NotFoundError('Карточка не найдена.'));
     }
 
     if (!card.owner.equals(req.user.id)) {
-      next(new ForbiddenError('нельзя удалять чужие карточки'));
-      return;
+      return next(new ForbiddenError('нельзя удалять чужие карточки'));
     }
     await Card.findByIdAndDelete(req.params.cardId);
-    res.send(card);
+    return res.status(200).send(card);
   } catch (err) {
     if (err.name === 'CastError') {
       next(new BadRequestError('некорректные данные.'));
