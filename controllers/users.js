@@ -115,8 +115,8 @@ module.exports.updateUserAvatar = (req, res, next) => {
       req.user._id,
       { avatar },
       { new: true, runValidators: true },
-    )
-    .then((user) => res.status(200).send(user))
+    ).orFail(() => new NotFoundError('Пользователь не найден'))
+    .then((user) => res.send(user))
     .catch((err) => {
       if (err.name === 'ValidationError') {
         return next(new BadRequestError('Введены некорректные данные'));

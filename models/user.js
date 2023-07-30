@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const validator = require('validator');
+const isUrl = require('validator/lib/isURL');
+const isEmail = require('validator/lib/isEmail');
 
 const userSchema = new mongoose.Schema(
   {
@@ -21,19 +22,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
-      validate: {
-        validator: (url) => validator.isURL(url),
-        message: 'Некорректный URL',
-      },
+      validate: isUrl,
     },
     email: {
       type: String,
       required: true,
       unique: true,
-      validate: {
-        validator: (email) => validator.isEmail(email),
-        message: 'Некорректый email',
-      },
+      validate: isEmail,
     },
     password: {
       type: String,
