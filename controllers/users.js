@@ -34,7 +34,7 @@ module.exports.getUser = (req, res, next) => {
 };
 
 module.exports.getCurrentUser = (req, res, next) => {
-  const userId = req.user._id;
+  const userId = req.user.id;
   User.findById(userId)
     .orFail(() => next(new NotFoundError('Пользователь  не найден')))
     .then((user) => {
@@ -87,7 +87,7 @@ module.exports.updateUserInfo = (req, res, next) => {
   const { name, about } = req.body;
   User
     .findByIdAndUpdate(
-      req.user._id,
+      req.user.id,
       { name, about },
       { new: true, runValidators: true },
     )
@@ -110,7 +110,7 @@ module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
   User
     .findByIdAndUpdate(
-      req.user._id,
+      req.user.id,
       { avatar },
       { new: true, runValidators: true },
     ).orFail(() => new NotFoundError('Пользователь не найден'))
@@ -141,7 +141,7 @@ module.exports.login = (req, res, next) => {
       if (!passwordIsValid) {
         throw new AuthError('Ошибка авторизации');
       }
-      return jwtToken({ id: user._id });
+      return jwtToken({ id: user.id });
     })
     .then((token) => res.send({ token }))
     .catch((err) => next(err));
